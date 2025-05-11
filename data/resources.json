@@ -1,74 +1,387 @@
 {
-    "aws_s3_bucket": {
-      "provider": "aws",
-      "defaults": {
-        "bucket": "my-terraform-bucket",
-        "acl": "private",
-        "tags": {
-          "Environment": "Dev",
-          "CreatedBy": "Terrascope"
-        }
-      },
-      "required_fields": ["bucket"],
-      "popular": true,
-      "description": "AWS S3 Bucket for object storage"
+  "aws_s3_bucket": {
+    "provider": "aws",
+    "defaults": {
+      "bucket": "my-terraform-bucket",
+      "acl": "private",
+      "tags": {
+        "Environment": "Dev",
+        "CreatedBy": "Terrascope"
+      }
     },
-    "aws_instance": {
-      "provider": "aws",
-      "defaults": {
-        "ami": "ami-0c55b159cbfafe1f0",
-        "instance_type": "t2.micro",
-        "tags": {
-          "Name": "TerrascopeInstance",
-          "Environment": "Dev"
-        }
-      },
-      "required_fields": ["ami", "instance_type"],
-      "popular": true,
-      "description": "AWS EC2 Instance"
+    "required_fields": ["bucket"],
+    "popular": true,
+    "description": "AWS S3 Bucket for object storage"
+  },
+  "aws_instance": {
+    "provider": "aws",
+    "defaults": {
+      "ami": "ami-0c55b159cbfafe1f0",
+      "instance_type": "t2.micro",
+      "tags": {
+        "Name": "TerrascopeInstance",
+        "Environment": "Dev"
+      }
     },
-    "aws_vpc": {
-      "provider": "aws",
-      "defaults": {
-        "cidr_block": "10.0.0.0/16",
-        "enable_dns_support": true,
-        "enable_dns_hostnames": true,
-        "tags": {
-          "Name": "TerrascopeVPC"
-        }
-      },
-      "required_fields": ["cidr_block"],
-      "popular": true,
-      "description": "AWS Virtual Private Cloud"
+    "required_fields": ["ami", "instance_type"],
+    "popular": true,
+    "description": "AWS EC2 Instance"
+  },
+  "aws_vpc": {
+    "provider": "aws",
+    "defaults": {
+      "cidr_block": "10.0.0.0/16",
+      "enable_dns_support": true,
+      "enable_dns_hostnames": true,
+      "tags": {
+        "Name": "TerrascopeVPC"
+      }
     },
-    "azurerm_resource_group": {
-      "provider": "azurerm",
-      "defaults": {
-        "name": "terrascope-resources",
-        "location": "East US",
-        "tags": {
-          "environment": "dev"
-        }
-      },
-      "required_fields": ["name", "location"],
-      "popular": true,
-      "description": "Azure Resource Group"
+    "required_fields": ["cidr_block"],
+    "popular": true,
+    "description": "AWS Virtual Private Cloud"
+  },
+  "aws_subnet": {
+    "provider": "aws",
+    "defaults": {
+      "vpc_id": "${aws_vpc.main.id}",
+      "cidr_block": "10.0.1.0/24",
+      "availability_zone": "us-west-2a",
+      "tags": {
+        "Name": "TerrascopeSubnet"
+      }
     },
-    "azurerm_storage_account": {
-      "provider": "azurerm",
-      "defaults": {
-        "name": "terrascopestorage",
-        "resource_group_name": "terrascope-resources",
-        "location": "East US",
-        "account_tier": "Standard",
-        "account_replication_type": "LRS",
-        "tags": {
-          "environment": "dev"
+    "required_fields": ["vpc_id", "cidr_block"],
+    "popular": true,
+    "description": "AWS VPC Subnet"
+  },
+  "aws_security_group": {
+    "provider": "aws",
+    "defaults": {
+      "name": "terrascope-sg",
+      "vpc_id": "${aws_vpc.main.id}",
+      "description": "Security group for Terrascope instances",
+      "ingress": {
+        "from_port": 22,
+        "to_port": 22,
+        "protocol": "tcp",
+        "cidr_blocks": ["0.0.0.0/0"]
+      },
+      "egress": {
+        "from_port": 0,
+        "to_port": 0,
+        "protocol": "-1",
+        "cidr_blocks": ["0.0.0.0/0"]
+      },
+      "tags": {
+        "Name": "TerrascopeSG"
+      }
+    },
+    "required_fields": ["name", "vpc_id"],
+    "popular": true,
+    "description": "AWS Security Group"
+  },
+  "aws_iam_role": {
+    "provider": "aws",
+    "defaults": {
+      "name": "terrascope-role",
+      "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+      "tags": {
+        "Name": "TerrascopeRole"
+      }
+    },
+    "required_fields": ["name", "assume_role_policy"],
+    "popular": false,
+    "description": "AWS IAM Role"
+  },
+  "aws_dynamodb_table": {
+    "provider": "aws",
+    "defaults": {
+      "name": "terrascope-data",
+      "billing_mode": "PAY_PER_REQUEST",
+      "hash_key": "id",
+      "attribute": {
+        "name": "id",
+        "type": "S"
+      },
+      "tags": {
+        "Name": "TerrascopeDB",
+        "Environment": "Dev"
+      }
+    },
+    "required_fields": ["name", "hash_key"],
+    "popular": false,
+    "description": "AWS DynamoDB Table"
+  },
+  "aws_lambda_function": {
+    "provider": "aws",
+    "defaults": {
+      "function_name": "terrascope-function",
+      "runtime": "nodejs14.x",
+      "handler": "index.handler",
+      "role": "${aws_iam_role.lambda_role.arn}",
+      "filename": "lambda_function.zip",
+      "source_code_hash": "${filebase64sha256(\"lambda_function.zip\")}",
+      "tags": {
+        "Name": "TerrascopeLambda"
+      }
+    },
+    "required_fields": ["function_name", "runtime", "handler", "role"],
+    "popular": true,
+    "description": "AWS Lambda Function"
+  },
+  "aws_rds_cluster": {
+    "provider": "aws",
+    "defaults": {
+      "cluster_identifier": "terrascope-db",
+      "engine": "aurora-mysql",
+      "engine_version": "5.7.mysql_aurora.2.09.1",
+      "database_name": "terrascope",
+      "master_username": "admin",
+      "master_password": "temppassword",
+      "backup_retention_period": 7,
+      "preferred_backup_window": "07:00-09:00",
+      "skip_final_snapshot": true,
+      "tags": {
+        "Name": "TerrascopeDB"
+      }
+    },
+    "required_fields": ["cluster_identifier", "engine", "master_username", "master_password"],
+    "popular": false,
+    "description": "AWS RDS Aurora Cluster"
+  },
+  "aws_cloudfront_distribution": {
+    "provider": "aws",
+    "defaults": {
+      "enabled": true,
+      "is_ipv6_enabled": true,
+      "comment": "Terrascope CDN",
+      "default_root_object": "index.html",
+      "origin": {
+        "domain_name": "${aws_s3_bucket.website.bucket_regional_domain_name}",
+        "origin_id": "S3-terrascope-website"
+      },
+      "default_cache_behavior": {
+        "allowed_methods": ["GET", "HEAD"],
+        "cached_methods": ["GET", "HEAD"],
+        "target_origin_id": "S3-terrascope-website",
+        "forwarded_values": {
+          "query_string": false,
+          "cookies": {
+            "forward": "none"
+          }
+        },
+        "viewer_protocol_policy": "redirect-to-https",
+        "min_ttl": 0,
+        "default_ttl": 3600,
+        "max_ttl": 86400
+      },
+      "price_class": "PriceClass_100",
+      "restrictions": {
+        "geo_restriction": {
+          "restriction_type": "none"
         }
       },
-      "required_fields": ["name", "resource_group_name", "location"],
-      "popular": true,
-      "description": "Azure Storage Account"
-    }
+      "viewer_certificate": {
+        "cloudfront_default_certificate": true
+      },
+      "tags": {
+        "Name": "TerrascopeCDN"
+      }
+    },
+    "required_fields": ["origin", "default_cache_behavior", "restrictions", "viewer_certificate"],
+    "popular": false,
+    "description": "AWS CloudFront Distribution"
+  },
+  "azurerm_resource_group": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-resources",
+      "location": "East US",
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "location"],
+    "popular": true,
+    "description": "Azure Resource Group"
+  },
+  "azurerm_storage_account": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascopestorage",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "account_tier": "Standard",
+      "account_replication_type": "LRS",
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location"],
+    "popular": true,
+    "description": "Azure Storage Account"
+  },
+  "azurerm_virtual_network": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-vnet",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "address_space": ["10.0.0.0/16"],
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location", "address_space"],
+    "popular": true,
+    "description": "Azure Virtual Network"
+  },
+  "azurerm_subnet": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-subnet",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "virtual_network_name": "${azurerm_virtual_network.main.name}",
+      "address_prefixes": ["10.0.1.0/24"]
+    },
+    "required_fields": ["name", "resource_group_name", "virtual_network_name", "address_prefixes"],
+    "popular": false,
+    "description": "Azure Subnet"
+  },
+  "azurerm_network_security_group": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-nsg",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location"],
+    "popular": false,
+    "description": "Azure Network Security Group"
+  },
+  "azurerm_network_security_rule": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-ssh",
+      "priority": 100,
+      "direction": "Inbound",
+      "access": "Allow",
+      "protocol": "Tcp",
+      "source_port_range": "*",
+      "destination_port_range": "22",
+      "source_address_prefix": "*",
+      "destination_address_prefix": "*",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "network_security_group_name": "${azurerm_network_security_group.main.name}"
+    },
+    "required_fields": ["name", "priority", "direction", "access", "protocol", "resource_group_name", "network_security_group_name"],
+    "popular": false,
+    "description": "Azure Network Security Rule"
+  },
+  "azurerm_linux_virtual_machine": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-vm",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "size": "Standard_B1s",
+      "admin_username": "adminuser",
+      "network_interface_ids": ["${azurerm_network_interface.main.id}"],
+      "admin_ssh_key": {
+        "username": "adminuser",
+        "public_key": "ssh-rsa AAAAB..."
+      },
+      "os_disk": {
+        "caching": "ReadWrite",
+        "storage_account_type": "Standard_LRS"
+      },
+      "source_image_reference": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "18.04-LTS",
+        "version": "latest"
+      },
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location", "size", "admin_username", "network_interface_ids", "os_disk", "source_image_reference"],
+    "popular": true,
+    "description": "Azure Linux Virtual Machine"
+  },
+  "azurerm_app_service_plan": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-plan",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "kind": "Linux",
+      "reserved": true,
+      "sku": {
+        "tier": "Basic",
+        "size": "B1"
+      },
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location", "sku"],
+    "popular": false,
+    "description": "Azure App Service Plan"
+  },
+  "azurerm_app_service": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-app",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "app_service_plan_id": "${azurerm_app_service_plan.main.id}",
+      "site_config": {
+        "linux_fx_version": "NODE|14-lts"
+      },
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location", "app_service_plan_id"],
+    "popular": true,
+    "description": "Azure App Service"
+  },
+  "azurerm_sql_server": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascope-sqlserver",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "location": "${azurerm_resource_group.main.location}",
+      "version": "12.0",
+      "administrator_login": "adminuser",
+      "administrator_login_password": "P@ssw0rd1234!",
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "location", "version", "administrator_login", "administrator_login_password"],
+    "popular": false,
+    "description": "Azure SQL Server"
+  },
+  "azurerm_sql_database": {
+    "provider": "azurerm",
+    "defaults": {
+      "name": "terrascopedb",
+      "resource_group_name": "${azurerm_resource_group.main.name}",
+      "server_name": "${azurerm_sql_server.main.name}",
+      "edition": "Basic",
+      "requested_service_objective_name": "Basic",
+      "tags": {
+        "environment": "dev"
+      }
+    },
+    "required_fields": ["name", "resource_group_name", "server_name"],
+    "popular": false,
+    "description": "Azure SQL Database"
   }
-  
+}

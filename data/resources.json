@@ -1,0 +1,74 @@
+{
+    "aws_s3_bucket": {
+      "provider": "aws",
+      "defaults": {
+        "bucket": "my-terraform-bucket",
+        "acl": "private",
+        "tags": {
+          "Environment": "Dev",
+          "CreatedBy": "Terrascope"
+        }
+      },
+      "required_fields": ["bucket"],
+      "popular": true,
+      "description": "AWS S3 Bucket for object storage"
+    },
+    "aws_instance": {
+      "provider": "aws",
+      "defaults": {
+        "ami": "ami-0c55b159cbfafe1f0",
+        "instance_type": "t2.micro",
+        "tags": {
+          "Name": "TerrascopeInstance",
+          "Environment": "Dev"
+        }
+      },
+      "required_fields": ["ami", "instance_type"],
+      "popular": true,
+      "description": "AWS EC2 Instance"
+    },
+    "aws_vpc": {
+      "provider": "aws",
+      "defaults": {
+        "cidr_block": "10.0.0.0/16",
+        "enable_dns_support": true,
+        "enable_dns_hostnames": true,
+        "tags": {
+          "Name": "TerrascopeVPC"
+        }
+      },
+      "required_fields": ["cidr_block"],
+      "popular": true,
+      "description": "AWS Virtual Private Cloud"
+    },
+    "azurerm_resource_group": {
+      "provider": "azurerm",
+      "defaults": {
+        "name": "terrascope-resources",
+        "location": "East US",
+        "tags": {
+          "environment": "dev"
+        }
+      },
+      "required_fields": ["name", "location"],
+      "popular": true,
+      "description": "Azure Resource Group"
+    },
+    "azurerm_storage_account": {
+      "provider": "azurerm",
+      "defaults": {
+        "name": "terrascopestorage",
+        "resource_group_name": "terrascope-resources",
+        "location": "East US",
+        "account_tier": "Standard",
+        "account_replication_type": "LRS",
+        "tags": {
+          "environment": "dev"
+        }
+      },
+      "required_fields": ["name", "resource_group_name", "location"],
+      "popular": true,
+      "description": "Azure Storage Account"
+    }
+  }
+  

@@ -17,7 +17,7 @@
 
 ## Personal Background & Motivation
 
-During my time at ExxonMobil, I worked extensively with Terraform to manage large-scale infrastructure. While Terraform is incredibly powerful, I noticed that many team members struggled with the HCL syntax and the lack of visual representation for infrastructure resources. This project was born from that experience - a solution to make Infrastructure as Code (IaC) more accessible to everyone.
+During my time at ExxonMobil, I worked extensively with Terraform to manage large-scale infrastructure. While Terraform is incredibly powerful, I noticed sometimes my team and I struggled with the HCL syntax and the lack of visual representation for infrastructure resources. This project was born from that experience. A solution to make Infrastructure as Code (IaC) more accessible to everyone.
 
 TerraScope represents a quick and intuitive tool that bridges the gap between visual design and code generation. It's especially valuable for:
 - Team members new to Terraform who need to understand infrastructure relationships

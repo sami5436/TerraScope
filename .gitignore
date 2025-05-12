@@ -1,0 +1,19 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Pytest cache
+.pytest_cache/
+
+# Project output
+output/*.tf
+output/*.log
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+
+# Environment
+.env
